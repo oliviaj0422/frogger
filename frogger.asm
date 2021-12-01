@@ -39,8 +39,16 @@
 	frogY: .word 28 # initial y-coordinate of the frog
 	xConv: .word 4 # convert x-coordinate to bitmap display
 	yConv: .word 128 # convert y-coordinate to bitmap display
+	
+	orange: .word 0xff8000 # orange colour
 		
 .text
+	
+main: 
+	
+### Set up the background
+
+# paint the goal region
 	lw $t0, displayAddress # $t0 stores the base address for display
 	li $t1, 0x66b2ff # $t1 stores the blue colour code for cars
 	li $t2, 0x00994c # $t2 stores the green colour code for the goal region
@@ -49,13 +57,7 @@
 	li $t5, 256 # specify the number of pixels to draw the goal region
 	li $t6, 0xff8000 # orange colour for frog
 	li $t7, 0xffffff # white colour for cars
-	
-main: 
-	
-### Set up the background
 
-# paint the goal region
-	lw $t0, displayAddress
 	
 drawGoalRegion:
 	
@@ -93,51 +95,8 @@ drawStartingRegion:
 	sw $t4, 0($t0) # top left corner of the starting region
 	addi $t0, $t0, 4 # advance to the next pixel position
 	addi $t5, $t5, -1 # decrement $t5 by 1
-	bnez $t5, drawStartingRegion
+	bnez $t5, drawStartingRegion	
 	
-	## set up the initial location of frog
-	lw $t1, frogX # load xPos of frog into t1
-	lw $t2, xConv # load xConv into t2
-	mult $t1, $t2 # frogX * 4
-	mflo $t3      # t3 = frogX * 4
-	
-	lw $t1, frogY # load yPos of frog into t1
-	lw $t2, yConv # load yConv into t2
-	mult $t1, $t2 # frogY * 128
-	mflo $t4      # t3 = frogY * 128
-	
-	lw $t0, displayAddress # load the display address into t0
-	add $t1, $t3, $t4 # t1 = frogX * 4 + frogY * 128
-	add $t0, $t0, $t1 # t0 = t1 + display address
-	
-drawFrog:
-		
-	sw $t6, 0($t0) # orange color stored at the location on the bitmap display
-	addi $t0, $t0, 128 # switch to the next row right below
-	sw $t6, 0($t0) # draw a pixel
-	addi $t0, $t0, 4 # locate a pixel right next to the previous one
-	sw $t6, 0($t0)
-	addi $t0, $t0, 128 # switch to the next row right below
-	sw $t6, 0($t0)
-	addi $t0, $t0, 124 # switch to the next row then one pixel to the left
-	sw $t6, 0($t0)	
-	# draw 3 more pixels in a row as the bottom of the frog
-	addi $t0, $t0, 4
-	sw $t6, 0($t0)
-	addi $t0, $t0, 4
-	sw $t6, 0($t0)
-	addi $t0, $t0, 4 
-	sw $t6, 0($t0)	
-	# finish the other half of the frog
-	addi $t0, $t0, -132 # go back to the second bottom row
-	sw $t6, 0($t0)
-	addi $t0, $t0, -128 # switch to the row above
-	sw $t6, 0($t0)
-	addi $t0, $t0, 4 # advance to the next pixel
-	sw $t6, 0($t0)
-	addi $t0, $t0, -128 # switch to the row above
-	sw $t6, 0($t0)
-
 ######## Draw Vehicles
 
 ######## First row of vehicles
@@ -257,7 +216,7 @@ paintLog1:
 fillWater2:
 	la $t8, lF2 # load lF1 address into t3
 	addi $t2, $zero, 512 # t2 = 512
-	add $t3, $zero, $zero # i = 20
+	add $t3, $zero, $zero # i = 0
 	li $t5, 0x66b2ff # load blue colour into t5
 	jal fillArray # call function fillArray
 	
@@ -290,9 +249,148 @@ paintLog2:
 	jal paintObj # paint one row of logs
 
 
-##################################################################################
-################### HELPER FUNCTIONS		
+## set up the initial location of frog
+	lw $t1, frogX # load xPos of frog into t1
+	lw $t2, xConv # load xConv into t2
+	lw $t4, frogY
+	lw $t5, yConv	
+	lw $t0, displayAddress # load the display address into t0
+	lw $t6, orange
+paintFrog:
+	
+	jal drawFrog
+				
+### Update function for game
 
+# if input == w ===> moveUp
+# if input == a ===> moveLeft
+# if input == s ===> moveDown
+# if input == d ===> moveRight
+
+# $t1 = user input
+# 
+gameLoop:
+
+# check for keyboard input
+	lw $t8, 0xffff0000  
+	beq $t8, 1, keyboard_input
+	beq $t8, 0, moveCar1 # if no key was pressed, branch to no_keyboard_input
+	
+keyboard_input:
+
+	lw $t1, 0xffff0004 # load keyboard input
+	
+	# identify keyboard input by ASCII value
+	beq $t1, 0x61, respond_to_a # if input == a branch to respond_to_a
+	beq $t1, 0x77, respond_to_w # if input == w branch to respond_to_w
+	beq $t1, 0x73, respond_to_s # if input == s branch to respond_to_s
+	beq $t1, 0x64, respond_to_d # if input == d branch to respond_to_d
+
+respond_to_a:
+	
+	lw $t1, frogX # load current x-coor of frog
+	la $t8, frogX # load address of frogX
+	addi $t1, $t1, -1 # moving left along the x axis
+	sw $t1, 0($t8) # update value in frogX
+	
+	j main # repaint the screen
+
+respond_to_w:
+	
+	lw $t1, frogY
+	la $t8, frogY
+	addi $t1, $t1, -1
+	sw $t1, 0($t8)
+	
+	j main
+
+respond_to_s:
+	
+	lw $t1, frogY
+	la $t8, frogY
+	addi $t1, $t1, 1
+	sw $t1, 0($t8)
+	
+	j main
+
+respond_to_d:
+
+	lw $t1, frogX # load current x-coor of frog
+	la $t8, frogX # load address of frogX
+	addi $t1, $t1, 1 # moving left along the x axis
+	sw $t1, 0($t8) # update value in frogX
+	
+	j main # repaint the screen
+						
+moveCar1:
+	la $t8, vF1 # load vF1 into t8
+	addi $t0, $zero, 4 # second last pixel of the array
+	addi $t1, $zero, 512
+	lw $t9, 0($t8) # t9 = lF2[508]
+	jal shift_object_left 
+	
+	la $t8, vF1 # load vF1 into t8
+	lw $t9, displayAddress # load display address into t9
+	addi $t1, $zero, 128 # t1 = 512
+	addi $t9, $t9, 2560 # start drawing the pixel at 2560
+	jal paintObj # paint one row of vehicles
+
+moveCar2:
+	la $t8, vF2 # load vF1 into t8
+	addi $t0, $zero, 504 # second last pixel of the array
+	lw $t9, 508($t8) # t9 = lF2[508]
+	
+	jal shift_object_right
+	
+	la $t8, vF2 # load vF1 into t8
+	lw $t9, displayAddress # load display address into t9
+	addi $t1, $zero, 128 # t1 = 512
+	addi $t9, $t9, 3072
+	jal paintObj
+
+moveLog1:
+	la $t8, lF1 # load vF1 into t8
+	addi $t0, $zero, 4 # second last pixel of the array
+	addi $t1, $zero, 512
+	lw $t9, 0($t8) # t9 = lF2[508]
+	jal shift_object_left
+	
+	la $t8, lF1 # load vF1 into t8
+	lw $t9, displayAddress # load display address into t9
+	addi $t1, $zero, 128 # t1 = 512
+	addi $t9, $t9, 1024 # start drawing the pixel at 1024
+	jal paintObj # paint one row of logs
+
+moveLog2:
+	la $t8, lF2 # load vF1 into t8
+	addi $t0, $zero, 504 # second last pixel of the array
+	lw $t9, 508($t8) # t9 = lF2[508]
+	
+	jal shift_object_right
+	
+	la $t8, lF2 # load vF1 into t8
+	lw $t9, displayAddress # load display address into t9
+	addi $t1, $zero, 128 # t1 = 512
+	addi $t9, $t9, 1536 # start drawing the pixel at 1536
+	jal paintObj
+				
+### Sleep for 1 second before proceeding to the next line
+	li $v0, 32 ### syscall sleep
+	li $a0, 16 ### sleep for 1000 // 16 millisecond ~ 16 ms 
+	syscall
+	
+	j end_game_loop
+	
+end_game_loop:
+	j gameLoop # loop back to beginning
+		
+Exit:
+	li $v0, 10 # terminate the program gracefully
+	syscall
+	
+##################################################################################
+################### HELPER FUNCTIONS
+		
 #### A loop that fill an array with values
 #### t3: current index
 #### t2: number of iterations
@@ -305,7 +403,8 @@ fillArray:
 	j fillArray
 	
 endFA:
-	jr $ra	
+	jr $ra
+	
 
 #### Assign colours to bitmap display
 #### t8: one array
@@ -317,8 +416,118 @@ paintObj:
 	addi $t9, $t9, 4 # advance to the next pixel value
 	addi $t1, $t1, -1 # decrement t1 by 1
 	bnez $t1, paintObj # keep executing until t1 = 0
-	jr $ra			
+	jr $ra	
 
-Exit:
-	li $v0, 10 # terminate the program gracefully
-	syscall
+##############################################################################
+	
+##############################################################################
+drawFrog:
+	# set up location on bitmap display
+	mult $t1, $t2 # frogX * 4
+	mflo $t3      # t3 = frogX * 4
+	
+	mult $t4, $t5 # frogY * 128
+	mflo $t9      # t3 = frogY * 128
+	
+	add $t1, $t3, $t9 # t1 = frogX * 4 + frogY * 128
+	add $t0, $t0, $t1 # t0 = t1 + display address
+	
+	sw $t6, 0($t0) # orange color stored at the location on the bitmap display
+	addi $t0, $t0, 128 # switch to the next row right below
+	sw $t6, 0($t0) # draw a pixel
+	addi $t0, $t0, 4 # locate a pixel right next to the previous one
+	sw $t6, 0($t0)
+	addi $t0, $t0, 128 # switch to the next row right below
+	sw $t6, 0($t0)
+	addi $t0, $t0, 124 # switch to the next row then one pixel to the left
+	sw $t6, 0($t0)	
+	# draw 3 more pixels in a row as the bottom of the frog
+	addi $t0, $t0, 4
+	sw $t6, 0($t0)
+	addi $t0, $t0, 4
+	sw $t6, 0($t0)
+	addi $t0, $t0, 4 
+	sw $t6, 0($t0)	
+	# finish the other half of the frog
+	addi $t0, $t0, -132 # go back to the second bottom row
+	sw $t6, 0($t0)
+	addi $t0, $t0, -128 # switch to the row above
+	sw $t6, 0($t0)
+	addi $t0, $t0, 4 # advance to the next pixel
+	sw $t6, 0($t0)
+	addi $t0, $t0, -128 # switch to the row above
+	sw $t6, 0($t0)
+	
+	jr $ra 
+#######################################################################
+shift_object_right:
+	
+	bltz $t0, wrap_around_right_zero # if t0 < 0 branch to wrap_around_right_zero
+	beq $t0, 124, wrap_around_right # else if t0 = 124 branch to wrap_around_right
+ 	beq $t0, 252, wrap_around_right # or if t0 = 252 
+ 	beq $t0, 380, wrap_around_right # or if t0 = 380
+ 	
+	add $t2, $t8, $t0
+	lw $t3, 0($t2)
+	addi $t2, $t2, 4 # shift one pixel to the right
+	sw $t3, 0($t2)
+	addi $t0, $t0, -4	
+	 
+	j shift_object_right
+
+wrap_around_right:
+
+ 	add $t2, $t8, $t0 
+ 	addi $t2, $t2, 4
+ 	sw $t9, 0($t2)
+ 
+ 	addi $t2, $t2, -4
+ 	lw $t9, 0($t2)
+ 	addi $t0, $t0, -4
+ 	
+ 	j shift_object_right	
+	
+wrap_around_right_zero:
+
+	add $t2, $t8, $t0
+	addi $t2, $t2, 4
+	sw $t9, 0($t2)
+	
+	jr $ra
+
+#########################################################################
+shift_object_left:
+	
+	bge $t0, $t1, wrap_around_left_zero # if t0 < 0 branch to wrap_around_right_zero
+	beq $t0, 384, wrap_around_left # or if t0 = 380
+	beq $t0, 128, wrap_around_left # else if t0 = 124 branch to wrap_around_right
+ 	beq $t0, 256, wrap_around_left # or if t0 = 252 
+ 		
+	add $t2, $t8, $t0
+	lw $t3, 0($t2)
+	addi $t2, $t2, -4 # shift one pixel to the left
+	sw $t3, 0($t2)
+	addi $t0, $t0, 4	
+	 
+	j shift_object_left
+
+wrap_around_left:
+
+ 	add $t2, $t8, $t0 
+ 	addi $t2, $t2, -4
+ 	sw $t9, 0($t2)
+ 
+ 	addi $t2, $t2, 4
+ 	lw $t9, 0($t2)
+ 	addi $t0, $t0, 4
+ 	
+ 	j shift_object_left	
+	
+wrap_around_left_zero:
+
+	add $t2, $t8, $t0
+	addi $t2, $t2, -4
+	sw $t9, 0($t2)
+	
+	jr $ra	
+
