@@ -274,7 +274,7 @@ gameLoop:
 # check for keyboard input
 	lw $t8, 0xffff0000  
 	beq $t8, 1, keyboard_input
-	beq $t8, 0, moveCar1 # if no key was pressed, branch to no_keyboard_input
+	beq $t8, 0, no_keyboard_input # if no key was pressed, branch to no_keyboard_input
 	
 keyboard_input:
 
@@ -285,12 +285,16 @@ keyboard_input:
 	beq $t1, 0x77, respond_to_w # if input == w branch to respond_to_w
 	beq $t1, 0x73, respond_to_s # if input == s branch to respond_to_s
 	beq $t1, 0x64, respond_to_d # if input == d branch to respond_to_d
+	#beq $t1, 0x72, respond_to_r # if input == r branch to restart_game
 
 respond_to_a:
 	
-	lw $t1, frogX # load current x-coor of frog
+	lw $t1, frogX # load current x-coor of frog	
 	la $t8, frogX # load address of frogX
 	addi $t1, $t1, -1 # moving left along the x axis
+	
+	# if reaches the leftmost screen, no more moving
+	blt $t1, $zero, no_keyboard_input
 	sw $t1, 0($t8) # update value in frogX
 	
 	j main # repaint the screen
@@ -300,6 +304,10 @@ respond_to_w:
 	lw $t1, frogY
 	la $t8, frogY
 	addi $t1, $t1, -1
+	
+	# if reaches the top of the screen, no more moving
+	blt $t1, $zero, no_keyboard_input
+	
 	sw $t1, 0($t8)
 	
 	j main
@@ -309,6 +317,10 @@ respond_to_s:
 	lw $t1, frogY
 	la $t8, frogY
 	addi $t1, $t1, 1
+	
+	# if reaches the bottom of the screen, no more moving
+	bge $t1, 29, no_keyboard_input
+	
 	sw $t1, 0($t8)
 	
 	j main
@@ -318,9 +330,16 @@ respond_to_d:
 	lw $t1, frogX # load current x-coor of frog
 	la $t8, frogX # load address of frogX
 	addi $t1, $t1, 1 # moving left along the x axis
+	
+	# if reaches the rightmost screen, no more moving to the right
+	bge $t1, 29, no_keyboard_input 
+	
 	sw $t1, 0($t8) # update value in frogX
 	
 	j main # repaint the screen
+
+	
+no_keyboard_input:
 						
 moveCar1:
 	la $t8, vF1 # load vF1 into t8
@@ -373,10 +392,22 @@ moveLog2:
 	addi $t1, $zero, 128 # t1 = 512
 	addi $t9, $t9, 1536 # start drawing the pixel at 1536
 	jal paintObj
+	
+	## set up the initial location of frog
+	lw $t1, frogX # load xPos of frog into t1
+	lw $t2, xConv # load xConv into t2
+	lw $t4, frogY
+	lw $t5, yConv	
+	lw $t0, displayAddress # load the display address into t0
+	lw $t6, orange
+	
+redraw_frog:
+	
+	jal drawFrog
 				
 ### Sleep for 1 second before proceeding to the next line
 	li $v0, 32 ### syscall sleep
-	li $a0, 16 ### sleep for 1000 // 16 millisecond ~ 16 ms 
+	li $a0, 66 ### sleep for 1000 // 16 millisecond ~ 16 ms 
 	syscall
 	
 	j end_game_loop
