@@ -35,7 +35,7 @@
 	vF2: .space 512 # reserve memory for row 2 of vehicles
 	lF1: .space 512 # reserve memory for row 1 of logs
 	lF2: .space 512 # reserve memory for row 2 of logs
-	frogX: .word 14 # initial x-coordinate of the top left corner of the frog
+	frogX: .word 16 # initial x-coordinate of the top left corner of the frog
 	frogY: .word 28 # initial y-coordinate of the frog
 	xConv: .word 4 # convert x-coordinate to bitmap display
 	yConv: .word 128 # convert y-coordinate to bitmap display
@@ -43,7 +43,7 @@
 	veh_starting_pt_2: .word 0 # another starting position of vehicle/log colours in array
 	log_starting_pt_1: .word 32
 	log_starting_pt_2: .word 0
-	rateDivider: .word 5
+	rateDivider: .word 10
 	
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
@@ -296,7 +296,7 @@ respond_to_w:
 	
 	lw $t1, frogY
 	la $t8, frogY
-	addi $t1, $t1, -1
+	addi $t1, $t1, -4
 	
 	# if reaches the top of the screen, no more moving
 	blt $t1, $zero, no_keyboard_input
@@ -309,7 +309,7 @@ respond_to_s:
 	
 	lw $t1, frogY
 	la $t8, frogY
-	addi $t1, $t1, 1
+	addi $t1, $t1, 4
 	
 	# if reaches the bottom of the screen, no more moving
 	bge $t1, 29, no_keyboard_input
@@ -484,7 +484,7 @@ start_over_right:
 	j frog
 
 recount:
-	addi $t3, $zero, 5
+	addi $t3, $zero, 10
 	la $t4, rateDivider
 	sw $t3, 0($t4)
 
