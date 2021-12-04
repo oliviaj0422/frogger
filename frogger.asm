@@ -39,10 +39,11 @@
 	frogY: .word 28 # initial y-coordinate of the frog
 	xConv: .word 4 # convert x-coordinate to bitmap display
 	yConv: .word 128 # convert y-coordinate to bitmap display
-	veh_starting_pt_1: 36 # starting position of vehicle/log colours in array
-	veh_starting_pt_2: 0 # another starting position of vehicle/log colours in array
-	log_starting_pt_1: 32
-	log_starting_pt_2: 0
+	veh_starting_pt_1: .word 36 # starting position of vehicle/log colours in array
+	veh_starting_pt_2: .word 0 # another starting position of vehicle/log colours in array
+	log_starting_pt_1: .word 32
+	log_starting_pt_2: .word 0
+	rateDivider: .word 5
 	
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
@@ -349,13 +350,18 @@ respond_to_q:
 no_keyboard_input:
 	
 moveLog1:	
-		  
+	lw $t3, rateDivider	  
 	la $t8, lF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
 	lw $t9, 0($t8) # t9 = lF2[508]
-	jal shift_object_left
+	beqz $t3, log1_shift
+	j drawLog1
 	
+log1_shift:
+	jal shift_object_left
+
+drawLog1:	
 	la $t8, lF1 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -376,12 +382,17 @@ start_over_left_1:
 	sw $t1, 0($t0)
 
 moveLog2:
+	lw $t3, rateDivider
 	la $t8, lF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
+	beqz $t3, log2_shift
+	j drawLog2
 	
+log2_shift:
 	jal shift_object_right
-	
+
+drawLog2:	
 	la $t8, lF2 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -403,12 +414,18 @@ start_over_right_1:
 	j moveCar1
 							
 moveCar1:
+	lw $t3, rateDivider
 	la $t8, vF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
 	lw $t9, 0($t8) # t9 = lF2[508]
-	jal shift_object_left 
+	beqz $t3, veh1_shift
+	j drawVeh1
 	
+veh1_shift:
+	jal shift_object_left 
+
+drawVeh1:	
 	la $t8, vF1 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -428,12 +445,17 @@ start_over_left:
 	sw $t1, 0($t0)	
 
 moveCar2:
+	lw $t3, rateDivider
 	la $t8, vF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
-	
+	beqz $t3, veh2_shift
+	j drawVeh2
+
+veh2_shift:
 	jal shift_object_right
-	
+
+drawVeh2:	
 	la $t8, vF2 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -453,7 +475,20 @@ start_over_right:
 	addi $t1, $zero, 0
 	sw $t1, 0($t0)
 	##### frog
+	# update rate divider
+	la $t4, rateDivider
+	lw $t3, rateDivider
+	beqz $t3, recount
+	addi $t3, $t3, -1
+	sw $t3, 0($t4)
+	j frog
 
+recount:
+	addi $t3, $zero, 5
+	la $t4, rateDivider
+	sw $t3, 0($t4)
+
+	##### frog
 frog:
 	lw $t1, frogX # load xPos of frog into t1
 	lw $t2, xConv # load xConv into t2
@@ -528,7 +563,7 @@ no_collision:
 				
 ### Sleep for 1 second before proceeding to the next line
 	li $v0, 32 ### syscall sleep
-	li $a0, 100 ### sleep for 1000 // 60 millisecond ~ 16 ms 
+	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
 	syscall
 	
 	j end_game_loop
