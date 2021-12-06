@@ -35,18 +35,20 @@
 	vF2: .space 512 # reserve memory for row 2 of vehicles
 	lF1: .space 512 # reserve memory for row 1 of logs
 	lF2: .space 512 # reserve memory for row 2 of logs
-	frogX: .word 14 # initial x-coordinate of the top left corner of the frog
+	frogX: .word 16 # initial x-coordinate of the top left corner of the frog
 	frogY: .word 28 # initial y-coordinate of the frog
 	xConv: .word 4 # convert x-coordinate to bitmap display
 	yConv: .word 128 # convert y-coordinate to bitmap display
-	veh_starting_pt_1: 36 # starting position of vehicle/log colours in array
-	veh_starting_pt_2: 0 # another starting position of vehicle/log colours in array
-	log_starting_pt_1: 32
-	log_starting_pt_2: 0
+	veh_starting_pt_1: .word 40 # starting position of vehicle/log colours in array
+	veh_starting_pt_2: .word 0 # another starting position of vehicle/log colours in array
+	log_starting_pt_1: .word 28
+	log_starting_pt_2: .word 0
+	rateDivider: .word 8
 	
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
 	blue: .word 0x66b2ff # water colour
+	brown: .word 0x994c00 # log colour
 		
 .text
 	
@@ -73,7 +75,7 @@ fillCar:
 outerLoop:
 	bge $t3, $t2, paintCar1 # while i < 512
 	addi $t0, $zero, 0 # initialize t0 = 0 as index i
-	addi $t1, $zero, 28 # t1 =  to iterate 8 times
+	addi $t1, $zero, 24 # t1 =  to iterate 8 times
 	add $t4, $t8, $t3 # hold address for vF1[i]
 	li $t5, 0xffff66 # load yellow colour into t5
 innerLoop:
@@ -107,7 +109,7 @@ fillCar2:
 outerLoop2:
 	bge $t3, $t2, paintCar2 # while i < 512
 	addi $t0, $zero, 0 # initialize t0 = 0 as index i
-	addi $t1, $zero, 28 # t1 =  to iterate 8 times
+	addi $t1, $zero, 24 # t1 =  to iterate 8 times
 	add $t4, $t8, $t3 # hold address for vF1[i]
 	li $t5, 0xffff66 # load yellow colour into t5
 innerLoop2:
@@ -141,7 +143,7 @@ fillLog:
 outerLoop3:
 	bge $t3, $t2, paintLog1 # while i < 512
 	addi $t0, $zero, 0 # initialize t0 = 0 as index i
-	addi $t1, $zero, 32 # t1 =  to iterate 9 times
+	addi $t1, $zero, 36 # t1 =  to iterate 9 times
 	add $t4, $t8, $t3 # hold address for vF1[i]
 	li $t5, 0x994c00 # load brown colour into t5
 innerLoop3:
@@ -174,7 +176,7 @@ fillLog2:
 outerLoop4:
 	bge $t3, $t2, paintLog2 # while i < 512
 	addi $t0, $zero, 0 # initialize t0 = 0 as index i
-	addi $t1, $zero, 32 # t1 =  to iterate 9 times
+	addi $t1, $zero, 36 # t1 =  to iterate 9 times
 	add $t4, $t8, $t3 # hold address for vF1[i]
 	li $t5, 0x994c00 # load brown colour into t5
 innerLoop4:
@@ -189,7 +191,7 @@ endInner4:
 
 paintLog2:
 
-		### Set up the background
+### Set up the background
 
 # paint the goal region
 	lw $t0, displayAddress # $t0 stores the base address for display
@@ -238,7 +240,6 @@ drawSafeRegion:
 
 # The road region is black, so will skip to drawing the starting region
 	
-
 drawStartingRegion:
 	
 	sw $t4, 0($t0) # top left corner of the starting region
@@ -295,7 +296,7 @@ respond_to_w:
 	
 	lw $t1, frogY
 	la $t8, frogY
-	addi $t1, $t1, -1
+	addi $t1, $t1, -4
 	
 	# if reaches the top of the screen, no more moving
 	blt $t1, $zero, no_keyboard_input
@@ -308,7 +309,7 @@ respond_to_s:
 	
 	lw $t1, frogY
 	la $t8, frogY
-	addi $t1, $t1, 1
+	addi $t1, $t1, 4
 	
 	# if reaches the bottom of the screen, no more moving
 	bge $t1, 29, no_keyboard_input
@@ -349,13 +350,18 @@ respond_to_q:
 no_keyboard_input:
 	
 moveLog1:	
-		  
+	lw $t3, rateDivider	  
 	la $t8, lF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
 	lw $t9, 0($t8) # t9 = lF2[508]
-	jal shift_object_left
+	beqz $t3, log1_shift
+	j drawLog1
 	
+log1_shift:
+	jal shift_object_left
+
+drawLog1:	
 	la $t8, lF1 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -376,12 +382,17 @@ start_over_left_1:
 	sw $t1, 0($t0)
 
 moveLog2:
+	lw $t3, rateDivider
 	la $t8, lF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
+	beqz $t3, log2_shift
+	j drawLog2
 	
+log2_shift:
 	jal shift_object_right
-	
+
+drawLog2:	
 	la $t8, lF2 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -403,12 +414,18 @@ start_over_right_1:
 	j moveCar1
 							
 moveCar1:
+	lw $t3, rateDivider
 	la $t8, vF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
 	lw $t9, 0($t8) # t9 = lF2[508]
-	jal shift_object_left 
+	beqz $t3, veh1_shift
+	j drawVeh1
 	
+veh1_shift:
+	jal shift_object_left 
+
+drawVeh1:	
 	la $t8, vF1 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -428,12 +445,17 @@ start_over_left:
 	sw $t1, 0($t0)	
 
 moveCar2:
+	lw $t3, rateDivider
 	la $t8, vF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
-	
+	beqz $t3, veh2_shift
+	j drawVeh2
+
+veh2_shift:
 	jal shift_object_right
-	
+
+drawVeh2:	
 	la $t8, vF2 # load vF1 into t8
 	lw $t9, displayAddress # load display address into t9
 	addi $t1, $zero, 128 # t1 = 512
@@ -444,7 +466,7 @@ moveCar2:
 	la $t0, veh_starting_pt_2
 	lw $t1, veh_starting_pt_2
 	addi $t1, $t1, 4
-	addi $t2, $zero, 36
+	addi $t2, $zero, 28
 	bge $t1, $t2, start_over_right
 	sw $t1, 0($t0)
 
@@ -453,16 +475,91 @@ start_over_right:
 	addi $t1, $zero, 0
 	sw $t1, 0($t0)
 	##### frog
+	# update rate divider
+	la $t4, rateDivider
+	lw $t3, rateDivider
+	beqz $t3, reset_rateDivider
+	addi $t3, $t3, -1
+	sw $t3, 0($t4)
+	j frog
 
+reset_rateDivider:
+
+	addi $t3, $zero, 8
+	la $t4, rateDivider
+	sw $t3, 0($t4)
+
+	##### frog
 frog:
 	lw $t1, frogX # load xPos of frog into t1
 	lw $t2, xConv # load xConv into t2
 	lw $t4, frogY
 	lw $t5, yConv	
 	#lw $t0, displayAddress # load the display address into t0
-	lw $t6, orange
 	
+	jal set_up_frog
+	
+	add $t7, $zero, $v0
+	addi $t3, $zero, 1664  
+	bge $t7, $t3, draw_frog # if t7 >= 1664, skip this step
+	addi $t3, $zero, 1024
+	blt $t7, $t3, draw_frog # elif t7 < 1024, skip this step
+	
+	lw $t8, displayAddress
+	add $t2, $t8, $t7
+	lw $t4, brown	
+	addi $t5, $zero, 4  # i= 4
+
+check_if_on_log:
+
+	beqz $t5, exit_check_if_on_log # branch if i = 0
+	addi $t1, $zero, 4 # j = 4
+	
+	check_row:	
+	# check if the each row of frog covers brown pixels
+		beqz $t1, exit_check_row
+		lw $t3, 0($t2) # load colour
+		bne $t3, $t4, draw_frog # check if t3 and t4 contain the same colour
+		addi $t2, $t2, 4 # advance to the next pixel
+		addi $t1, $t1, -1 # j = j - 1
+		j check_row
+		
+	exit_check_row:	
+		addi $t2, $t2, 112
+		addi $t5, $t5, -1 # i = i - 1
+		j check_if_on_log
+		
+exit_check_if_on_log:
+
+	# now all pixels that will be covered by the frog are brown
+	# meaning we are on a log!
+	# Then we update frogX
+	
+	la $t0, frogX
+	lw $t4, frogX
+	lw $t1, frogY	
+	# update frogX (frogY will stay the same)
+	# check the direction of the log:
+	lw $t3, rateDivider
+	bnez $t3, draw_frog
+	addi $t2, $zero, 12
+	blt $t1, $t2, move_to_left
+	addi $t4, $t4, 1
+	sw $t4, 0($t0) 
+	
+	j draw_frog
+	
+move_to_left:			
+	addi $t4, $t4, -1
+	sw $t4, 0($t0)
+		
 draw_frog:
+	lw $t1, frogX # load xPos of frog into t1
+	lw $t2, xConv # load xConv into t2
+	lw $t4, frogY
+	lw $t5, yConv	
+	#lw $t0, displayAddress # load the display address into t0
+	lw $t6, orange
 	
 	jal set_up_frog 
 	
@@ -471,7 +568,7 @@ draw_frog:
 	add $t0, $t1, $zero
 	jal drawFrog
 
-
+check_collisions:
 #### detect collisions
 # with vehicles
 	
@@ -482,38 +579,38 @@ draw_frog:
 	add $t2, $zero, $v0 # t2 = current (x,y) of frog on bitmap display
 	
 	# If (x,y) not in [2560, 3584), then frog is not in road region. 
-	li $t1, 2560
+	addi $t1, $zero, 2560
 	blt $t2, $t1, detect_water_falling # branch to check if frog in in water region
-	li $t1, 3584
+	addi $t1, $zero, 3584
 	bge $t2, $t1, no_collision
 	
 	# now, check if the left and right side of the frog has yellow pixel
 	# if yes ==> collision!
 	
-	li $t1, 512
+	addi $t1, $zero, 512
 	lw $t4, displayAddress
 	add $t2, $t2, $t4
-	addi $t3, $t2, -4 # start with a pixel on the left of (x,y)
+	addi $t3, $t2, 0 # start with a pixel on the left of (x,y)
 	
-check_left_side:	
+check_left_car:	
 	# first, check the left side
 	lw $t4, 0($t3) # load the colour of that pixel
 	lw $t5, yellow
 	beq $t4, $t5, collision_detected
 	addi $t3, $t3, 128
 	addi $t1, $t1, -128
-	bnez $t1, check_left_side
+	bnez $t1, check_left_car
 	
-	li $t1, 512
-	addi $t3, $t2, 20 # a pixel on the right of the right side of frog
-check_right_side:
+	addi $t1, $zero, 512
+	addi $t3, $t2, 12 # a pixel on the right of the right side of frog
+check_right_car:
 
 	lw $t4, 0($t3) # load the colour of that pixel
 	lw $t5, yellow
 	beq $t4, $t5, collision_detected
 	addi $t3, $t3, 128
 	addi $t1, $t1, -128
-	bnez $t1, check_right_side
+	bnez $t1, check_right_car
 	
 	j no_collision
 			
@@ -523,12 +620,60 @@ collision_detected:
 	
 detect_water_falling:
 	
+	#lw $t1, frogX # current x coor of frog
+	#lw $t4, frogY # current y coor of frog
+	#jal set_up_frog # return the location of (x, y) on bitmap display
+	# if (frogX, frogY) == yellow ==> collision!
+	#add $t2, $zero, $v0 # t2 = current (x,y) of frog on bitmap display
+	
+	# If (x,y) not in [2560, 3584), then frog is not in road region. 
+	addi, $t1, $zero, 1024
+	blt $t2, $t1, no_collision # branch to check if frog in in water region
+	addi, $t1,  $zero, 2048
+	bge $t2, $t1, no_collision
+	
+	addi $t1, $zero, 512
+	lw $t4, displayAddress
+	add $t2, $t2, $t4
+	#addi $t3, $t2, -4 # start with a pixel on the left of (x,y)
+	
+### check 
+
+check_left_side:	
+	# first, check the left side
+	lw $t4, 0($t2) # load the colour of that pixel
+	lw $t5, blue
+	beq $t4, $t5, falling_detected
+	addi $t3, $t3, 128
+	addi $t1, $t1, -128
+	bnez $t1, check_left_side
+	
+	addi $t1, $zero, 512
+	addi $t3, $t2, 12 # a pixel on the right of the right side of frog
+	
+check_right_side:
+
+	lw $t4, 0($t3) # load the colour of that pixel
+	lw $t5, blue
+	beq $t4, $t5, falling_detected
+	addi $t3, $t3, 128
+	addi $t1, $t1, -128
+	bnez $t1, check_right_side
+	
+	j no_collision
+
+falling_detected:
+
+	j respond_to_r # restart game
 
 no_collision:
+
+check_if_in_goal_region:
+	
 				
 ### Sleep for 1 second before proceeding to the next line
 	li $v0, 32 ### syscall sleep
-	li $a0, 100 ### sleep for 1000 // 60 millisecond ~ 16 ms 
+	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
 	syscall
 	
 	j end_game_loop
