@@ -49,6 +49,7 @@
 	yellow: .word 0xffff66 # vehicle colour
 	blue: .word 0x66b2ff # water colour
 	brown: .word 0x994c00 # log colour
+	pink: .word 0xff99cc
 		
 .text
 	
@@ -210,22 +211,26 @@ drawGoalRegion:
 	addi $t0, $t0, 4 # advance to the next pixel position
 	addi $t5, $t5, -1 # decrement $t5 by 1
 	bnez $t5, drawGoalRegion # keep drawing until $t5 is zero.
-	
-	lw $t0, displayAddress
-	addi $t0, $t0, 1024
-	addi $t5, $zero, 256 # set length of pixels to 256
 
-drawWaterRegion:
-	 
-	sw $t1, 0($t0) # start painting the water region right beneath the goal region
-	addi $t0, $t0, 4 # advance to the next pixel position
-	addi $t5, $t5, -1 # decrement $t5 by 1
-	bnez $t5, drawWaterRegion # keep drawing until $t5 is zero.
+	addi $t3, $zero, 5
+	addi $t0, $t0, -124
+	lw $t7, pink
+	lw $t8, blue	
+empty_goal_regions:
 	
+	jal draw_empty_goal_slot
 	
+	addi $t0, $t0, -12
+	jal fill_out_center
+	
+	addi $t0, $t0, 268
+	addi $t3, $t3, -1
+	bnez $t3, empty_goal_regions
+
+exit_drawing_goal_region:
 	lw $t0, displayAddress
 	addi $t0, $t0, 2048
-	addi $t5, $zero, 128 # set length of pixels to 128
+	addi $t5, $zero, 256 # set length of pixels to 256
 	
 drawSafeRegion:
 
@@ -840,3 +845,50 @@ wrap_around_left_zero:
 	
 	jr $ra	
 
+draw_empty_goal_slot:
+	
+	sw $t7, 0($t0)
+	addi $t0, $t0, -128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+		
+	jr $ra
+
+fill_out_center:
+	
+	sw $t8, 0($t0)
+	addi $t0, $t0, 4
+	sw $t8, 0($t0)
+	addi $t0, $t0, 4
+	sw $t8, 0($t0)
+	addi $t0, $t0, -128
+	sw $t8, 0($t0)
+	addi $t0, $t0, -4
+	sw $t8, 0($t0)
+	addi $t0, $t0, -4
+	sw $t8, 0($t0)
+	addi $t0, $t0, -128
+	sw $t8, 0($t0)
+	addi $t0, $t0, 4
+	sw $t8, 0($t0)
+	addi $t0, $t0, 4
+	sw $t8, 0($t0)
+	
+	jr $ra
