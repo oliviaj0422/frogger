@@ -14,17 +14,17 @@
 #
 # Which milestone is reached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# - Milestone 1 / 2 (choose the one that applies)
+# - Milestone 1/2/3(choose the one that applies)
 #
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
+# 1. Display the number of lives remaining.
 # 2. (fill in the feature, if any)
 # 3. (fill in the feature, if any)
 # ... (add more if necessary)
 #
 # Any additional information that the TA needs to know:
-# - (write here, if any)
+# - To end the game click "q", this will stop the main loop
 #
 #####################################################################
 
@@ -45,11 +45,24 @@
 	log_starting_pt_2: .word 0
 	rateDivider: .word 8
 	
+	goal_region_list: .word 516, 540, 564, 588, 612 # pixel values of the top left corners 
+	                                           #of each goal region from left to right
+
+	fill_goal_region_list: .space 20	
+	frog_lives: .word 3
+	game_difficulty: 1
+	number_of_frogs_lived: .word 0
+	
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
 	blue: .word 0x66b2ff # water colour
 	brown: .word 0x994c00 # log colour
 	pink: .word 0xff99cc
+	black: .word 0x000000
+	red: .word 0xff3333
+	purple: .word 0x4c0099 # safe region colour
+	white: .word 0xffffff
+	green: .word 0x00994c
 		
 .text
 	
@@ -196,13 +209,13 @@ paintLog2:
 
 # paint the goal region
 	lw $t0, displayAddress # $t0 stores the base address for display
-	li $t1, 0x66b2ff # $t1 stores the blue colour code for cars
-	li $t2, 0x00994c # $t2 stores the green colour code for the goal region
-	li $t3, 0x994c00 # $t3 stores the brown colour code for logs
-	li $t4, 0x4c0099 # $t4 stores the purple colour code for safe and start region
+	lw $t1, blue # $t1 stores the blue colour code for cars
+	lw $t2, green # $t2 stores the green colour code for the goal region
+	lw $t3, brown # $t3 stores the brown colour code for logs
+	lw $t4, purple # $t4 stores the purple colour code for safe and start region
 	li $t5, 256 # specify the number of pixels to draw the goal region
-	li $t6, 0xff8000 # orange colour for frog
-	li $t7, 0xffffff # white colour for cars
+	lw $t6, orange # orange colour for frog
+	lw $t7, white # white colour for cars
 
 	
 drawGoalRegion:
@@ -214,11 +227,11 @@ drawGoalRegion:
 
 	addi $t3, $zero, 5
 	addi $t0, $t0, -124
-	lw $t7, pink
+	lw $t7, green
 	lw $t8, blue	
 empty_goal_regions:
 	
-	jal draw_empty_goal_slot
+	jal draw_empty_goal_slot # decide later if wanna keep this
 	
 	addi $t0, $t0, -12
 	jal fill_out_center
@@ -226,12 +239,71 @@ empty_goal_regions:
 	addi $t0, $t0, 268
 	addi $t3, $t3, -1
 	bnez $t3, empty_goal_regions
+	
+	
+	la $t1, fill_goal_region_list
+	addi $t5, $zero, 5
+	addi $t2, $zero, 0
 
-exit_drawing_goal_region:
+# check if any frog is on the goal spots.	
+fill_empty_goal_regions:
+
+	add $t3, $t1, $t2
+	lw $t4, 0($t3)
+	bnez $t4, fill_out_slot 
+	addi $t5, $t5, -1
+	addi $t2, $t2, 4 
+	bnez $t5, fill_empty_goal_regions
+	
+	j exit_fill_out_goal_regions
+	
+fill_out_slot:
+	lw $t0, displayAddress
+	lw $t6, black
+	add $t0, $t0, $t4
+	jal drawFrog
+	
+	# update number of frogs lived
+	la $t7, number_of_frogs_lived
+	lw $t9, ($t1)
+	addi $t9, $t9, 1
+	sw $t9, 0($t7)
+	
+	addi $t5, $t5, -1
+	addi $t2, $t2, 4
+	j fill_empty_goal_regions
+
+exit_fill_out_goal_regions:	
+		
+	lw $t0, displayAddress
+	lw $t1, frog_lives
+	lw $t2, red
+	addi $t0, $t0, 4
+
+draw_frog_lives:
+	
+	sw $t2, 0($t0)
+	addi $t0, $t0, 8
+	addi $t1, $t1, -1
+	bnez $t1, draw_frog_lives
+
+display_difficulty:
+	lw $t0, displayAddress
+	lw $t1, game_difficulty
+	lw $t7, white
+	addi $t2, $zero, 1
+	beq $t1, $t2, drawOne
+	jal numberTwo
+	j exit_drawing_difficulty
+	
+drawOne:
+	jal numberOne
+
+exit_drawing_difficulty:	
 	lw $t0, displayAddress
 	addi $t0, $t0, 2048
 	addi $t5, $zero, 256 # set length of pixels to 256
-	
+	lw $t4, purple
 drawSafeRegion:
 
 	sw $t4, 0($t0) # top left corner of the safe region
@@ -265,7 +337,7 @@ drawStartingRegion:
 # 
 gameLoop:
 
-
+load_keyboard_input:
 # check for keyboard input
 	lw $t8, 0xffff0000  
 	beq $t8, 1, keyboard_input
@@ -345,6 +417,13 @@ respond_to_r: # restart the game
 	
 	sw $t1, 0($t8) # set frogX = 14
 	sw $t2, 0($t9) # set frogY = 28
+	
+	## reset frog lives if == 0
+	lw $t3, frog_lives
+	bnez $t3, paintLog2
+	la $t4, frog_lives
+	addi $t3, $zero, 3
+	sw $t3, 0($t4) # reset to 3
 	
 	j paintLog2
 
@@ -620,7 +699,13 @@ check_right_car:
 	j no_collision
 			
 collision_detected:
-
+	
+	# frog lives minus 1
+	la $t0, frog_lives
+	lw $t1, frog_lives
+	addi $t1, $t1, -1
+	sw $t1, 0($t0)
+	
 	j respond_to_r # restart
 	
 detect_water_falling:
@@ -668,14 +753,56 @@ check_right_side:
 	j no_collision
 
 falling_detected:
+	
+	# frog lives minus 1
+	la $t0, frog_lives
+	lw $t1, frog_lives
+	addi $t1, $t1, -1
+	sw $t1, 0($t0)
 
 	j respond_to_r # restart game
 
 no_collision:
-
+	# check if frogX == any element in goal_region_list
+	addi $t0, $zero, 5 # i = 5
+	la $t8, goal_region_list
+	# load location of frog
+	lw $t1, frogX
+	lw $t2, xConv
+	lw $t4, frogY
+	lw $t5, yConv
+	jal set_up_frog
+	addi $t7, $v0, 0
+	
+	addi $t3, $zero, 0
+	
+	
 check_if_in_goal_region:
 	
-				
+	add $t6, $t8, $t3
+	lw $t2, ($t6)
+	beq $t2, $t7, record_success
+	addi $t3, $t3, 4
+	addi $t0, $t0, -1
+	bnez, $t0, check_if_in_goal_region
+	
+	j sleep
+
+record_success:
+
+	la $t1, fill_goal_region_list
+	add $t1, $t1, $t3
+	sw $t7, 0($t1)
+	
+	# update number_of_frogs_lived
+	# if 5 frogs has all survived, reset the list
+	
+	
+	# otherwise, continue
+	j respond_to_r
+	
+	
+sleep:				
 ### Sleep for 1 second before proceeding to the next line
 	li $v0, 32 ### syscall sleep
 	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
@@ -890,5 +1017,61 @@ fill_out_center:
 	sw $t8, 0($t0)
 	addi $t0, $t0, 4
 	sw $t8, 0($t0)
+	
+	jr $ra
+
+numberOne:	
+# t0 = displayAdress, t7 = colour
+
+	addi $t0, $t0, 116
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 8
+	sw $t7, 0($t0)
+	
+	jr $ra
+
+numberTwo:	
+	addi $t0, $t0, 116
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	
+	jr $ra
+
+reset_fill_goal_region_list:
+	
+	sw $zero, 0($t1)
+	sw $zero, 4($t1)
+	sw $zero, 8($t1)
+	sw $zero, 12($t1)
+	sw $zero, 16($t1)
 	
 	jr $ra
