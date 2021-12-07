@@ -263,12 +263,6 @@ fill_out_slot:
 	add $t0, $t0, $t4
 	jal drawFrog
 	
-	# update number of frogs lived
-	la $t7, number_of_frogs_lived
-	lw $t9, ($t1)
-	addi $t9, $t9, 1
-	sw $t9, 0($t7)
-	
 	addi $t5, $t5, -1
 	addi $t2, $t2, 4
 	j fill_empty_goal_regions
@@ -796,14 +790,40 @@ record_success:
 	
 	# update number_of_frogs_lived
 	# if 5 frogs has all survived, reset the list
-	
+	la $t2, number_of_frogs_lived
+	lw $t0, number_of_frogs_lived
+	addi $t0, $t0, 1
+	addi $t5, $zero, 5
+	beq $t0, $t5, upgrade_difficulty
+	sw $t0, 0($t2)
 	
 	# otherwise, continue
 	j respond_to_r
+
+upgrade_difficulty:
+
+	la $t1, fill_goal_region_list 
+	jal reset_fill_goal_region_list
 	
+	la $t1, game_difficulty
+	lw $t2, game_difficulty
+	addi $t2, $t2, 1
+	addi $t3, $zero, 2
+	bgt $t2, $t3, win_state
+	sw $t2, 0($t1)
+	
+	la $t0, number_of_frogs_lived
+	sw $zero, 0($t0)
+	
+	j respond_to_r
+
+win_state:
+	j respond_to_q # end game	
 	
 sleep:				
 ### Sleep for 1 second before proceeding to the next line
+	lw $t1, number_of_frogs_lived
+	lw $t2, game_difficulty
 	li $v0, 32 ### syscall sleep
 	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
 	syscall
