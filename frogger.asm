@@ -55,6 +55,8 @@
 	number_of_frogs_lived: .word 0
 	score_pos: .word 44
 	score: .word 0
+		
+	game_over_prompt: .asciiz "Game Over! Press r to play again. Press q to end game.\n\n"
 	
 	## colours
 	orange: .word 0xff8000 # frog colour
@@ -941,7 +943,7 @@ win_state:
 	j respond_to_q # end game
 	
 isGameOver:
-	j gameOverLoop
+	j print_game_over_prompt
 
 	
 sleep:				
@@ -956,7 +958,10 @@ end_game_loop:
 
 	j gameLoop # loop back to beginning
 
-
+print_game_over_prompt:
+	li $v0, 4
+	la $a0, game_over_prompt
+	syscall
 
 gameOverLoop:
 
