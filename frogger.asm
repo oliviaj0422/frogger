@@ -19,9 +19,9 @@
 # Which approved additional features have been implemented?
 # (See the assignment handout for the list of additional features)
 # 1. Display the number of lives remaining.
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
-# ... (add more if necessary)
+# 2. Have a second level hat starts after the player completes the first level.
+# 3. Dynamic increase in difficulty
+# 4. Display the player’s score at the top of the screen.
 #
 # Any additional information that the TA needs to know:
 # - To end the game click "q", this will stop the main loop
@@ -53,9 +53,10 @@
 	frog_lives: .word 3
 	game_difficulty: 1
 	number_of_frogs_lived: .word 0
-	score_pos: .word 52
+	score_pos: .word 44
 	score: .word 0
 	
+	## colours
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
 	blue: .word 0x66b2ff # water colour
@@ -66,6 +67,7 @@
 	purple: .word 0x4c0099 # safe region colour
 	white: .word 0xffffff
 	green: .word 0x00994c
+	grey: .word 0x404040
 		
 .text
 	
@@ -457,9 +459,7 @@ respond_to_r: # restart the game
 	## reset frog lives if == 0
 	lw $t3, frog_lives
 	bnez $t3, paintLog2
-	la $t4, frog_lives
-	addi $t3, $zero, 3
-	sw $t3, 0($t4) # reset to 3
+	j isGameOver # show GAME OVER screen
 	
 	j paintLog2
 
@@ -864,6 +864,9 @@ falling_detected:
 	lw $t1, frog_lives
 	addi $t1, $t1, -1
 	sw $t1, 0($t0)
+	
+	## check if all lives are used up
+	beq $t1, $zero, isGameOver
 
 	j respond_to_r # restart game
 
@@ -935,7 +938,11 @@ upgrade_difficulty:
 	j respond_to_r
 
 win_state:
-	j respond_to_q # end game	
+	j respond_to_q # end game
+	
+isGameOver:
+	j gameOverLoop
+
 	
 sleep:				
 ### Sleep for 1 second before proceeding to the next line
@@ -948,7 +955,248 @@ sleep:
 end_game_loop:
 
 	j gameLoop # loop back to beginning
+
+
+
+gameOverLoop:
+
+	lw $t0, displayAddress
+	addi $t1, $zero, 1024
+	lw $t2, grey
+	
+paintScreen:
+	sw $t2, 0($t0)
+	addi $t0, $t0, 4
+	addi $t1, $t1, -1
+	bnez $t1, paintScreen
+	
+drawGameOverScreen:
+	lw $t0, displayAddress
+	addi $t0, $t0, 656
+	lw $t1, orange
 		
+	## letter G
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 116
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -4
+	sw $t1, 0($t0)
+	
+	## letter A
+	lw $t0, displayAddress
+	addi $t0, $t0, 680
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 12
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -4
+	sw $t1, 0($t0)
+	
+	## letter M
+	lw $t0, displayAddress
+	addi $t0, $t0, 700
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -380
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	
+	## letter E
+	lw $t0, displayAddress
+	addi $t0, $t0, 728
+	jal letterE
+	
+	## letter O
+	lw $t0, displayAddress
+	addi $t0, $t0, 1552
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	
+	## letter V
+	lw $t0, displayAddress
+	addi $t0, $t0, 1572
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
+	
+	## letter E
+	lw $t0, displayAddress
+	addi $t0, $t0, 1600
+	jal letterE
+	
+	## letter R
+	lw $t0, displayAddress
+	addi $t0, $t0, 1624
+	jal letterR
+	
+	#### RETRY
+	## letter R
+	lw $t0, displayAddress
+	addi $t0, $t0, 2444
+	jal letterR
+	
+	## letter E
+	lw $t0, displayAddress
+	addi $t0, $t0, 2464
+	jal letterE
+	
+	## letter T
+	lw $t0, displayAddress
+	addi $t0, $t0, 2484
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	
+	## letter R
+	lw $t0, displayAddress
+	addi $t0, $t0, 2508
+	jal letterR
+	
+	## letter Y
+	lw $t0, displayAddress
+	addi $t0, $t0, 2528
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, 132
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, -124
+	sw $t1, 0($t0)
+	addi $t0, $t0, 376
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)	
+
+# check for keyboard input
+	lw $t8, 0xffff0000  
+	beq $t8, 1, check_if_retry
+	beq $t8, 0, sleep_code # if no key was pressed, branch to no_keyboard_input
+check_if_retry:
+	lw $t1, 0xffff0004 # load keyboard input
+	
+	beq $t1, 0x72, retry # if input == r branch to retry
+	beq $t1, 0x71, endGame # if input == q branch to endGame
+
+retry:	
+	# reset frog lives
+	la $t4, frog_lives
+	addi $t3, $zero, 3
+	sw $t3, 0($t4) # reset to 3
+	j respond_to_r
+
+endGame:
+	j Exit
+
+sleep_code:				
+### Sleep for 1 second before proceeding to the next line
+	li $v0, 32 ### syscall sleep
+	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
+	syscall	
+	
+endGameOverLoop:
+	j gameOverLoop	
 Exit:
 	li $v0, 10 # terminate the program gracefully
 	syscall
@@ -1303,5 +1551,66 @@ reset_fill_goal_region_list:
 	sw $zero, 8($t1)
 	sw $zero, 12($t1)
 	sw $zero, 16($t1)
+	
+	jr $ra
+	
+letterE:
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+
+	addi $t0, $t0, 116
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	sw $t1, 0($t0)
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	
+	jr $ra
+	
+letterR:
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 120
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 128
+	sw $t1, 0($t0)
+	addi $t0, $t0, 12
+	sw $t1, 0($t0)
+	addi $t0, $t0, -132
+	sw $t1, 0($t0)
+	addi $t0, $t0, -132
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	sw $t1, 0($t0)
+	addi $t0, $t0, -128
+	sw $t1, 0($t0)
 	
 	jr $ra
