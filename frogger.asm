@@ -44,6 +44,7 @@
 	log_starting_pt_1: .word 28
 	log_starting_pt_2: .word 0
 	rateDivider: .word 8
+	lv_2_rateDivider: .word 0
 	
 	goal_region_list: .word 516, 540, 564, 588, 612 # pixel values of the top left corners 
 	                                           #of each goal region from left to right
@@ -66,7 +67,7 @@
 		
 .text
 	
-main: 
+main:  
 		
 ######## Draw Vehicles
 
@@ -426,9 +427,17 @@ respond_to_q:
 	j Exit	
 
 no_keyboard_input:
+
+set_speed1:
+	lw $t0, game_difficulty
+	addi $t1, $zero, 2
+	beq $t0, $t1, speed_up1
+	lw $t3, rateDivider
 	
-moveLog1:	
-	lw $t3, rateDivider	  
+	j moveLog1
+speed_up1:
+	lw $t3, lv_2_rateDivider	
+moveLog1:		  
 	la $t8, lF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
@@ -459,8 +468,18 @@ start_over_left_1:
 	addi $t1, $zero, 32
 	sw $t1, 0($t0)
 
-moveLog2:
+set_speed2:
 	lw $t3, rateDivider
+	lw $t0, game_difficulty
+	addi $t1, $zero, 2
+	beq $t0, $t1, speed_up2
+	
+	j moveLog2
+speed_up2:
+	lw $t3, lv_2_rateDivider
+	
+moveLog2:
+	#lw $t3, rateDivider
 	la $t8, lF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
@@ -489,10 +508,19 @@ drawLog2:
 start_over_right_1:
 	addi $t1, $zero, 0
 	sw $t1, 0($t0)
+	#j moveCar1
+
+set_speed3:
+	lw $t3, rateDivider
+	lw $t0, game_difficulty
+	addi $t1, $zero, 2
+	beq $t0, $t1, speed_up3
 	j moveCar1
+speed_up3:
+	lw $t3, lv_2_rateDivider
 							
 moveCar1:
-	lw $t3, rateDivider
+	#lw $t3, rateDivider
 	la $t8, vF1 # load vF1 into t8
 	addi $t0, $zero, 4 # second last pixel of the array
 	addi $t1, $zero, 512
@@ -522,8 +550,18 @@ start_over_left:
 	addi $t1, $zero, 36
 	sw $t1, 0($t0)	
 
-moveCar2:
+set_speed4:
 	lw $t3, rateDivider
+	lw $t0, game_difficulty
+	addi $t1, $zero, 2
+	beq $t0, $t1, speed_up4
+	
+	j moveCar2
+speed_up4:
+	lw $t3, lv_2_rateDivider
+	
+moveCar2:
+	#lw $t3, rateDivider
 	la $t8, vF2 # load vF1 into t8
 	addi $t0, $zero, 504 # second last pixel of the array
 	lw $t9, 508($t8) # t9 = lF2[508]
@@ -554,9 +592,22 @@ start_over_right:
 	sw $t1, 0($t0)
 	##### frog
 	# update rate divider
+	addi $t2, $zero, 2
+	lw $t5, game_difficulty
+	beq $t5, $t2, check_lv_2_rateDivider
 	la $t4, rateDivider
 	lw $t3, rateDivider
 	beqz $t3, reset_rateDivider
+	
+	j update_rateDivier
+	
+check_lv_2_rateDivider:
+	
+	la $t4, lv_2_rateDivider
+	lw $t6, lv_2_rateDivider
+	beqz $t6, reset_lv_2_rateDivider 
+	
+update_rateDivier:
 	addi $t3, $t3, -1
 	sw $t3, 0($t4)
 	j frog
@@ -566,6 +617,14 @@ reset_rateDivider:
 	addi $t3, $zero, 8
 	la $t4, rateDivider
 	sw $t3, 0($t4)
+	
+	j frog
+	
+reset_lv_2_rateDivider:	
+	# reset lv_2_rateDivider
+	addi $t1, $zero, 0
+	la $t2, lv_2_rateDivider
+	sw $t1, 0($t2)
 
 	##### frog
 frog:
@@ -613,12 +672,23 @@ exit_check_if_on_log:
 	# meaning we are on a log!
 	# Then we update frogX
 	
+set_speed5:
+	lw $t3, rateDivider
+	lw $t0, game_difficulty
+	addi $t1, $zero, 2
+	beq $t0, $t1, speed_up4
+	
+	j move_frog
+speed_up5:
+	lw $t3, lv_2_rateDivider
+
+move_frog:	
 	la $t0, frogX
 	lw $t4, frogX
 	lw $t1, frogY	
 	# update frogX (frogY will stay the same)
-	# check the direction of the log:
-	lw $t3, rateDivider
+	# check the direction of the log::
+	
 	bnez $t3, draw_frog
 	addi $t2, $zero, 12
 	blt $t1, $t2, move_to_left
@@ -822,8 +892,6 @@ win_state:
 	
 sleep:				
 ### Sleep for 1 second before proceeding to the next line
-	lw $t1, number_of_frogs_lived
-	lw $t2, game_difficulty
 	li $v0, 32 ### syscall sleep
 	li $a0, 16 ### sleep for 1000 // 60 millisecond ~ 16 ms 
 	syscall
