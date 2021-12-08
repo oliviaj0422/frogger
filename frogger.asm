@@ -53,6 +53,8 @@
 	frog_lives: .word 3
 	game_difficulty: 1
 	number_of_frogs_lived: .word 0
+	score_pos: .word 52
+	score: .word 0
 	
 	orange: .word 0xff8000 # frog colour
 	yellow: .word 0xffff66 # vehicle colour
@@ -287,14 +289,53 @@ display_difficulty:
 	lw $t1, game_difficulty
 	lw $t7, white
 	addi $t2, $zero, 1
+	addi $t0, $t0, 116
 	beq $t1, $t2, drawOne
 	jal numberTwo
-	j exit_drawing_difficulty
+	j drawScore
 	
 drawOne:
 	jal numberOne
+	
+drawScore:
+	lw $t0, displayAddress
+	lw $t3, score_pos
+	add $t0, $t0, $t3
+	addi $t5, $zero, 0
+	lw $t4, score
+	lw $t7, white
+	beq $t4, $t5, drawZero
+	addi $t5, $zero, 1
+	beq $t4, $t5, drawScoreOne
+	addi $t5, $zero, 2
+	beq $t4, $t5, drawTwo
+	addi $t5, $zero, 3
+	beq $t4, $t5, drawThree
+	addi $t5, $zero, 4
+	beq $t4, $t5, drawFour
+	jal numberFive
+	j exit_drawing_score
+drawZero:
+	jal numberZero
+	j exit_drawing_score
 
-exit_drawing_difficulty:	
+drawScoreOne:
+	jal numberOne
+	j exit_drawing_score
+	
+drawTwo:
+	jal numberTwo
+	j exit_drawing_score
+
+drawThree:
+	jal numberThree
+	j exit_drawing_score
+	
+drawFour:
+	jal numberFour
+	j exit_drawing_score
+	
+exit_drawing_score:	
 	lw $t0, displayAddress
 	addi $t0, $t0, 2048
 	addi $t5, $zero, 256 # set length of pixels to 256
@@ -858,6 +899,12 @@ record_success:
 	add $t1, $t1, $t3
 	sw $t7, 0($t1)
 	
+	# update score
+	la $t2, score
+	lw $t0, score
+	addi $t0, $t0, 1
+	sw $t0, 0($t2)
+	
 	# update number_of_frogs_lived
 	# if 5 frogs has all survived, reset the list
 	la $t2, number_of_frogs_lived
@@ -1108,10 +1155,34 @@ fill_out_center:
 	
 	jr $ra
 
+numberZero:
+
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -128
+	sw $t7, 0($t0)
+	
+	jr $ra
+	
 numberOne:	
 # t0 = displayAdress, t7 = colour
 
-	addi $t0, $t0, 116
+	#addi $t0, $t0, 116
 	sw $t7, 0($t0)
 	addi $t0, $t0, 4
 	sw $t7, 0($t0)
@@ -1129,7 +1200,7 @@ numberOne:
 	jr $ra
 
 numberTwo:	
-	addi $t0, $t0, 116
+	#addi $t0, $t0, 116
 	sw $t7, 0($t0)
 	addi $t0, $t0, 4
 	sw $t7, 0($t0)
@@ -1150,6 +1221,77 @@ numberTwo:
 	addi $t0, $t0, 4
 	sw $t7, 0($t0)
 	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	
+	jr $ra
+
+numberThree:
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -256
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	
+	jr $ra
+
+numberFour:
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -256
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	
+	jr $ra
+
+numberFive:
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 120
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 4
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, 128
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
+	sw $t7, 0($t0)
+	addi $t0, $t0, -4
 	sw $t7, 0($t0)
 	
 	jr $ra
